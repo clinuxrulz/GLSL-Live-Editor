@@ -6,3 +6,4 @@
 /ipch
 /glslLiveEditor.sdf
 /glslLiveEditor.suo
+/glslLiveEditor/fragment_shader.glsl
