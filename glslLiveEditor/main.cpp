@@ -8,6 +8,7 @@
 #include "TextEditor.h"
 #include "DefaultTextEditorModel.h"
 #include "OpenGLTextEditorUI.h"
+#include "Camera.h"
 
 // Minimal TechnoStream
 // http://www.subflow.net:8000/listen.pls
@@ -15,11 +16,21 @@
 #pragma comment(lib, "OpenGL32.lib")
 #pragma comment(lib, "GLU32.lib")
 
+static HWND hwnd = NULL;
 static HDC hDC = NULL;
 
 static TextEditorModel* textEditorModel;
 static TextEditorUI* textEditorUI;
 static TextEditor* textEditor;
+
+static Camera* camera = NULL;
+
+static bool cameraMovingForward = false;
+static bool cameraMovingBack = false;
+static bool cameraMovingLeft = false;
+static bool cameraMovingRight = false;
+static bool cameraMovingUp = false;
+static bool cameraMovingDown = false;
 
 static int shaderProgram  = -1;
 static int vertexShader   = -1;
@@ -33,8 +44,7 @@ void initGl() {
 	glClearDepth(1.0f);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glEnable(GL_DEPTH_TEST);
-	glDepthFunc(GL_LEQUAL);
+	glDisable(GL_DEPTH_TEST);
 	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
 	glEnable(GL_LIGHT0);
 	glEnable(GL_LIGHTING);
@@ -50,6 +60,7 @@ void initStartingCode() {
 	textEditorModel->insertText("precision highp float;\n");
 	textEditorModel->insertText("#endif\n");
 	textEditorModel->insertText("\n");
+	textEditorModel->insertText("varying vec3 camV, camEP;\n");
 	textEditorModel->insertText("uniform vec3 unResolution;\n");
 	textEditorModel->insertText("uniform float time;\n");
 	textEditorModel->insertText("uniform sampler2D tex0;\n");
@@ -60,6 +71,8 @@ void initStartingCode() {
 	textEditorModel->insertText("uniform vec3 unBeatBassFFT;\n");
 	textEditorModel->insertText("\n");
 	textEditorModel->insertText("void main() {\n");
+	textEditorModel->insertText("  vec3 ro = camEP;\n");
+	textEditorModel->insertText("  vec3 rd = normalize(camV - ro);\n");
 	textEditorModel->insertText("  vec3 col = vec3(0.0);\n");
 	textEditorModel->insertText("  \n");
 	textEditorModel->insertText("  gl_FragColor = vec4(col, 1.0);\n");
@@ -75,6 +88,7 @@ PFNGLATTACHSHADERPROC glAttachShader = NULL;
 PFNGLLINKPROGRAMPROC glLinkProgram = NULL;
 PFNGLUSEPROGRAMPROC glUseProgram = NULL;
 PFNGLUNIFORM1FPROC glUniform1f = NULL;
+PFNGLUNIFORM3FPROC glUniform3f = NULL;
 PFNGLDETACHSHADERPROC glDetachShader = NULL;
 PFNGLDELETESHADERPROC glDeleteShader = NULL;
 PFNGLDELETEPROGRAMPROC glDeleteProgram = NULL;
@@ -93,6 +107,7 @@ static void initShaders() {
 	glLinkProgram = (PFNGLLINKPROGRAMPROC)wglGetProcAddress("glLinkProgram");
 	glUseProgram = (PFNGLUSEPROGRAMPROC)wglGetProcAddress("glUseProgram");
 	glUniform1f = (PFNGLUNIFORM1FPROC)wglGetProcAddress("glUniform1f");
+	glUniform3f = (PFNGLUNIFORM3FPROC)wglGetProcAddress("glUniform3f");
 	glDetachShader = (PFNGLDETACHSHADERPROC)wglGetProcAddress("glDetachShader");
 	glDeleteShader = (PFNGLDELETESHADERPROC)wglGetProcAddress("glDeleteShader");
 	glDeleteProgram = (PFNGLDELETEPROGRAMPROC)wglGetProcAddress("glDeleteProgram");
@@ -130,9 +145,42 @@ void finalGl() {
 	delete textEditorUI;
 }
 
+void updateCamera() {
+	double cmat[16];
+	if (cameraMovingForward) {
+		camera->moveForward(10.0);
+	}
+	if (cameraMovingLeft) {
+		camera->moveLeft(10.0);
+	}
+	if (cameraMovingRight) {
+		camera->moveRight(10.0);
+	}
+	if (cameraMovingBack) {
+		camera->moveBack(10.0);
+	}
+	if (cameraMovingUp) {
+		camera->moveUp(10.0);
+	}
+	if (cameraMovingDown) {
+		camera->moveDown(10.0);
+	}
+	vec3 right;
+	right.cross(camera->getForward(), camera->getUp());
+	cmat[0] = right.getX();                 cmat[1] = camera->getForward().getX();   cmat[2] = camera->getUp().getX();         cmat[3] = 0.0;
+	cmat[4] = right.getY();                 cmat[5] = camera->getForward().getY();   cmat[6] = camera->getUp().getY();         cmat[7] = 0.0;
+	cmat[8] = right.getZ();                 cmat[9] = camera->getForward().getZ();   cmat[10] = camera->getUp().getZ();        cmat[11] = 0.0;
+	cmat[12] = -camera->getPosition().getX(); cmat[13] = -camera->getPosition().getY(); cmat[14] = -camera->getPosition().getZ(); cmat[15] = 1.0;
+	glLoadMatrixd(cmat);
+}
+
 void setGLSLUniforms() {
 	int time = glGetUniformLocation(shaderProgram, "time");
+	int unResolution = glGetUniformLocation(shaderProgram, "unResolution");
 	glUniform1f(time, GetTickCount() / 1000.0f);
+	RECT rect;
+	GetWindowRect(hwnd, &rect);
+	glUniform3f(unResolution, rect.right - rect.left, rect.bottom - rect.top, 0.0f);
 }
 
 void render() {
@@ -141,12 +189,8 @@ void render() {
 		setGLSLUniforms();
 		glColor3f(1.0f,0.0f,0.0f);
 		glLoadIdentity();
-		glBegin(GL_QUADS);
-		glVertex3f(-300.0f, -300.0f, -210.0f);
-		glVertex3f(+300.0f, -300.0f, -210.0f);
-		glVertex3f(+300.0f, +300.0f, -210.0f);
-		glVertex3f(-300.0f, +300.0f, -210.0f);
-		glEnd();
+		updateCamera();
+		glRects(-1,-1,1,1);
 	}
 	if (showEditor) {
 		glUseProgram(0);
@@ -188,11 +232,21 @@ void saveShader() {
 	os.close();
 }
 
+/*
 // vertex shader
 const GLchar *vsh="\
 void main()\
 {\
     gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;\
+}";*/
+
+// vertex shader
+const GLchar* vsh="\
+varying vec3 camV,camEP;\
+void main(){\
+  gl_Position=gl_Vertex;\
+  camV = vec3( gl_ModelViewMatrix*gl_Vertex);\
+  camEP= vec3( gl_ModelViewMatrix*vec4(0,0,-1,1) );\
 }";
 
 void compileShader() {
@@ -254,55 +308,93 @@ PIXELFORMATDESCRIPTOR pfd={0, 0, PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_D
 LRESULT CALLBACK wndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
 	switch (message) {
 	case WM_CHAR: {
-		char c = (char)wParam;
-		if (c >= 32 && c <= 128) {
-			textEditorModel->insertText(std::string() + c);
-			textEditorModel->moveCursor(+1, +0);
-		} else if (c == '\t') {
-			textEditorModel->insertText("  ");
-			textEditorModel->moveCursor(+2, +0);
-		} else if (c == 13) {
-			textEditorModel->enter();
-		} else if (c == 8) {
-			textEditorModel->backspaceChar();
+		if (showEditor) {
+			char c = (char)wParam;
+			if (c >= 32 && c <= 128) {
+				textEditorModel->insertText(std::string() + c);
+				textEditorModel->moveCursor(+1, +0);
+			} else if (c == '\t') {
+				textEditorModel->insertText("  ");
+				textEditorModel->moveCursor(+2, +0);
+			} else if (c == 13) {
+				textEditorModel->enter();
+			} else if (c == 8) {
+				textEditorModel->backspaceChar();
+			}
 		}
 		return 0;
 	}
 	case WM_KEYDOWN:
-		if (wParam == VK_DELETE) {
-			textEditorModel->deleteChar();
-			return 0;
-		} else if (wParam == VK_UP) {
-			textEditorModel->moveCursor(+0, -1);
-			return 0;
-		} else if (wParam == VK_DOWN) {
-			textEditorModel->moveCursor(+0, +1);
-			return 0;
-		} else if (wParam == VK_LEFT) {
-			textEditorModel->moveCursor(-1, +0);
-			return 0;
-		} else if (wParam == VK_RIGHT) {
-			textEditorModel->moveCursor(+1, +0);
-			return 0;
-		} else if (wParam == VK_HOME) {
-			textEditorModel->moveCursor(-textEditorModel->getCursorColumn(), +0);
-			return 0;
-		} else if (wParam == VK_END) {
-			textEditorModel->moveCursor(textEditorModel->getLine(textEditorModel->getCursorLine()).length() -
-					                    textEditorModel->getCursorColumn(), +0);
-			return 0;
-		} else if (wParam == VK_F1) {
-			loadShader();
-			return 0;
-		} else if (wParam == VK_F2) {
-			saveShader();
-			return 0;
-		} else if (wParam == VK_F5) {
-			compileShader();
-			return 0;
-		} else if (wParam == VK_F4) {
-			showEditor = !showEditor;
-			return 0;
+		if (showEditor) {
+			if (wParam == VK_DELETE) {
+				textEditorModel->deleteChar();
+				return 0;
+			} else if (wParam == VK_UP) {
+				textEditorModel->moveCursor(+0, -1);
+				return 0;
+			} else if (wParam == VK_DOWN) {
+				textEditorModel->moveCursor(+0, +1);
+				return 0;
+			} else if (wParam == VK_LEFT) {
+				textEditorModel->moveCursor(-1, +0);
+				return 0;
+			} else if (wParam == VK_RIGHT) {
+				textEditorModel->moveCursor(+1, +0);
+				return 0;
+			} else if (wParam == VK_HOME) {
+				textEditorModel->moveCursor(-textEditorModel->getCursorColumn(), +0);
+				return 0;
+			} else if (wParam == VK_END) {
+				textEditorModel->moveCursor(textEditorModel->getLine(textEditorModel->getCursorLine()).length() -
+											textEditorModel->getCursorColumn(), +0);
+				return 0;
+			} else if (wParam == VK_F1) {
+				loadShader();
+				return 0;
+			} else if (wParam == VK_F2) {
+				saveShader();
+				return 0;
+			} else if (wParam == VK_F5) {
+				compileShader();
+				return 0;
+			} else if (wParam == VK_F4) {
+				showEditor = false;
+				return 0;
+			}
+		} else {
+			if (wParam == VK_F4) {
+				showEditor = true;
+				return 0;
+			} else if (wParam == 'W') {
+				cameraMovingForward = true;
+			} else if (wParam == 'A') {
+				cameraMovingLeft = true;
+			} else if (wParam == 'D') {
+				cameraMovingRight = true;
+			} else if (wParam == 'S') {
+				cameraMovingBack = true;
+			} else if (wParam == VK_SHIFT) {
+				cameraMovingUp = true;
+			} else if (wParam == VK_CONTROL) {
+				cameraMovingDown = true;
+			}
+		}
+		break;
+	case WM_KEYUP:
+		if (!showEditor) {
+			if (wParam == 'W') {
+				cameraMovingForward = false;
+			} else if (wParam == 'A') {
+				cameraMovingLeft = false;
+			} else if (wParam == 'D') {
+				cameraMovingRight = false;
+			} else if (wParam == 'S') {
+				cameraMovingBack = false;
+			} else if (wParam == VK_SHIFT) {
+				cameraMovingUp = false;
+			} else if (wParam == VK_CONTROL) {
+				cameraMovingDown = false;
+			}
 		}
 		break;
 	}
@@ -349,12 +441,13 @@ extern "C"
 void WinMainCRTStartup()
 {
 	//hDC = GetDC(CreateWindow("edit", 0, WS_POPUP | WS_VISIBLE | WS_MAXIMIZE, 0, 0, 0, 0, 0, 0, 0, 0));
-	HWND hwnd = makeWindow();
+	hwnd = makeWindow();
 	hDC = GetDC(hwnd);
 	ShowCursor(false);
 	// init OpenGL
 	SetPixelFormat(hDC, ChoosePixelFormat(hDC, &pfd), &pfd);
 	wglMakeCurrent(hDC, wglCreateContext(hDC));
+	camera = new Camera();
 	initGl();
 	initStartingCode();
 	initShaders();
@@ -383,5 +476,6 @@ void WinMainCRTStartup()
 	net_radio_free();
 	finalShaders();
 	finalGl();
+	delete camera;
 	ExitProcess(0);
 }

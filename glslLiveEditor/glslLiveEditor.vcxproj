@@ -65,6 +65,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="bass.h" />
+    <ClInclude Include="Camera.h" />
     <ClInclude Include="DefaultTextEditorModel.h" />
     <ClInclude Include="glext.h" />
     <ClInclude Include="glprint.h" />
@@ -73,8 +74,10 @@
     <ClInclude Include="TextEditor.h" />
     <ClInclude Include="TextEditorModel.h" />
     <ClInclude Include="TextEditorUI.h" />
+    <ClInclude Include="vec3.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Camera.cpp" />
     <ClCompile Include="DefaultTextEditorModel.cpp" />
     <ClCompile Include="glprint.cpp" />
     <ClCompile Include="main.cpp" />
