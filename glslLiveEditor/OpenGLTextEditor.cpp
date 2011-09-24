@@ -2,7 +2,7 @@
 #include "OpenGLTextEditorUI.h"
 
 OpenGLTextEditor::OpenGLTextEditor() {
-	numVisibleRows = 40;
+	numVisibleRows = 28;
 	rowOffset = 0;
 }
 
