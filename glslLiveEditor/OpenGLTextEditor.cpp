@@ -2,7 +2,7 @@
 #include "OpenGLTextEditorUI.h"
 
 OpenGLTextEditor::OpenGLTextEditor() {
-	numVisibleRows = 20;
+	numVisibleRows = 40;
 	rowOffset = 0;
 }
 
@@ -20,6 +20,7 @@ void OpenGLTextEditor::paint(TextEditor* textEditor) {
 	float a = 1.0f + 0.1f * sin(t * 20.0f);
 	float b = sin(t * 2.5f) * 0.25f - 0.25f;
 	glPushMatrix();
+	glScalef(0.7f, 0.7f, 0.7f);
 	for (int i = max(0, rowOffset); i < min(textEditor->getNumLines(), rowOffset + numVisibleRows); ++i) {
 		glPushMatrix();
 		if (i == textEditor->getCursorLine()) {
