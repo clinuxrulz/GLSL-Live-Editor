@@ -165,6 +165,31 @@ void updateCamera() {
 	if (cameraMovingDown) {
 		camera->moveDown(10.0);
 	}
+	if (GetActiveWindow() != NULL) {
+		static int oldMouseX=-1, oldMouseY=-1;
+		int mouseX, mouseY;
+		RECT rect;
+		GetWindowRect(hwnd, &rect);
+		int centreX = (rect.left + rect.right) >> 1;
+		int centreY = (rect.top + rect.bottom) >> 1;
+		POINT p;
+		GetCursorPos(&p);
+		mouseX = p.x - rect.left;
+		mouseY = p.y - rect.top;
+		if (mouseX != centreX || mouseY != centreY) {
+			if (oldMouseX != -1) {
+				int moveX = mouseX - oldMouseX;
+				int moveY = mouseY - oldMouseY;
+				camera->turnRight(moveX * 0.1);
+				camera->turnDown(moveY * 0.1);
+				SetCursorPos(centreX, centreY);
+				mouseX = centreX - rect.left;
+				mouseY = centreY - rect.top;
+			}
+		}
+		oldMouseX = mouseX;
+		oldMouseY = mouseY;
+	}
 	vec3 right;
 	right.cross(camera->getForward(), camera->getUp());
 	cmat[0] = right.getX();                 cmat[1] = camera->getForward().getX();   cmat[2] = camera->getUp().getX();         cmat[3] = 0.0;
@@ -174,13 +199,17 @@ void updateCamera() {
 	glLoadMatrixd(cmat);
 }
 
+static float screenWidth, screenHeight;
+
 void setGLSLUniforms() {
 	int time = glGetUniformLocation(shaderProgram, "time");
 	int unResolution = glGetUniformLocation(shaderProgram, "unResolution");
 	glUniform1f(time, GetTickCount() / 1000.0f);
 	RECT rect;
 	GetWindowRect(hwnd, &rect);
-	glUniform3f(unResolution, rect.right - rect.left, rect.bottom - rect.top, 0.0f);
+	screenWidth = rect.right - rect.left;
+	screenHeight = rect.bottom - rect.top;
+	glUniform3f(unResolution, screenWidth, screenHeight, 0.0f);
 }
 
 void render() {
@@ -190,6 +219,7 @@ void render() {
 		glColor3f(1.0f,0.0f,0.0f);
 		glLoadIdentity();
 		updateCamera();
+		glScalef(screenWidth / screenHeight, 1.0f, 1.0f);
 		glRects(-1,-1,1,1);
 	}
 	if (showEditor) {
