@@ -9,7 +9,7 @@ public:
 		depth = 400.0;
 		position.set(0.0, 60.0, 60.0);
 		up.set(0.0, 1.0, 0.0);
-		forward.set(0.0, 0.0, 1.0);
+		forward.set(0.0, 0.0, -1.0);
 	}
 
 	double getDepth() const { return depth; }

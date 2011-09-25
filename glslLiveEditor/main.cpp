@@ -62,6 +62,9 @@ void initStartingCode() {
 	textEditorModel->insertText("\n");
 	textEditorModel->insertText("varying vec3 camV, camEP;\n");
 	textEditorModel->insertText("uniform vec3 unResolution;\n");
+	textEditorModel->insertText("uniform vec3 cameraForward;\n");
+	textEditorModel->insertText("uniform vec3 cameraUp;\n");
+	textEditorModel->insertText("uniform vec3 cameraPos;\n");
 	textEditorModel->insertText("uniform float time;\n");
 	textEditorModel->insertText("uniform sampler2D tex0;\n");
 	textEditorModel->insertText("uniform sampler2D tex1;\n");
@@ -70,14 +73,25 @@ void initStartingCode() {
 	textEditorModel->insertText("uniform vec4 unPos;\n");
 	textEditorModel->insertText("uniform vec3 unBeatBassFFT;\n");
 	textEditorModel->insertText("\n");
+	textEditorModel->insertText("float fov = 75.0;\n");
+	textEditorModel->insertText("float screenDist = 1.0 / tan(fov * 0.5);\n");
+	textEditorModel->insertText("\n");
+	textEditorModel->insertText("void getRay(out vec3 ro, out vec3 rd) {\n");
+	textEditorModel->insertText("  vec2 uv = gl_FragCoord.xy / unResolution.xy * 2.0 - 1.0;\n");
+	textEditorModel->insertText("  uv.x *= unResolution.x / unResolution.y;\n");
+	textEditorModel->insertText("  vec3 r = cross(cameraForward, cameraUp);\n");
+	textEditorModel->insertText("  ro = cameraPos;\n");
+	textEditorModel->insertText("  rd = normalize(cameraForward * -screenDist + uv.x * r + uv.y * cameraUp);\n");
+	textEditorModel->insertText("}\n");
+	textEditorModel->insertText("\n");
 	textEditorModel->insertText("void main() {\n");
-	textEditorModel->insertText("  vec3 ro = camEP;\n");
-	textEditorModel->insertText("  vec3 rd = normalize(camV - ro);\n");
+	textEditorModel->insertText("  vec3 ro, rd;\n");
+	textEditorModel->insertText("  getRay(ro, rd);\n");
 	textEditorModel->insertText("  vec3 col = vec3(0.0);\n");
 	textEditorModel->insertText("  \n");
 	textEditorModel->insertText("  gl_FragColor = vec4(col, 1.0);\n");
 	textEditorModel->insertText("}\n");
-	textEditorModel->moveCursor(+2 - textEditorModel->getCursorColumn(), +15 - textEditorModel->getCursorLine());
+	textEditorModel->moveCursor(+2 - textEditorModel->getCursorColumn(), +32 - textEditorModel->getCursorLine());
 }
 
 PFNGLCREATESHADERPROC glCreateShader = NULL;
@@ -190,13 +204,6 @@ void updateCamera() {
 		oldMouseX = mouseX;
 		oldMouseY = mouseY;
 	}
-	vec3 right;
-	right.cross(camera->getForward(), camera->getUp());
-	cmat[0] = right.getX();                 cmat[1] = camera->getForward().getX();   cmat[2] = camera->getUp().getX();         cmat[3] = 0.0;
-	cmat[4] = right.getY();                 cmat[5] = camera->getForward().getY();   cmat[6] = camera->getUp().getY();         cmat[7] = 0.0;
-	cmat[8] = right.getZ();                 cmat[9] = camera->getForward().getZ();   cmat[10] = camera->getUp().getZ();        cmat[11] = 0.0;
-	cmat[12] = -camera->getPosition().getX(); cmat[13] = -camera->getPosition().getY(); cmat[14] = -camera->getPosition().getZ(); cmat[15] = 1.0;
-	glLoadMatrixd(cmat);
 }
 
 static float screenWidth, screenHeight;
@@ -204,12 +211,18 @@ static float screenWidth, screenHeight;
 void setGLSLUniforms() {
 	int time = glGetUniformLocation(shaderProgram, "time");
 	int unResolution = glGetUniformLocation(shaderProgram, "unResolution");
+	int cameraForward = glGetUniformLocation(shaderProgram, "cameraForward");
+	int cameraUp = glGetUniformLocation(shaderProgram, "cameraUp");
+	int cameraPos = glGetUniformLocation(shaderProgram, "cameraPos");
 	glUniform1f(time, GetTickCount() / 1000.0f);
 	RECT rect;
 	GetWindowRect(hwnd, &rect);
 	screenWidth = rect.right - rect.left;
 	screenHeight = rect.bottom - rect.top;
 	glUniform3f(unResolution, screenWidth, screenHeight, 0.0f);
+	glUniform3f(cameraForward, camera->getForward().getX(), camera->getForward().getY(), camera->getForward().getZ());
+	glUniform3f(cameraUp, camera->getUp().getX(), camera->getUp().getY(), camera->getUp().getZ());
+	glUniform3f(cameraPos, camera->getPosition().getX(), camera->getPosition().getY(), camera->getPosition().getZ());
 }
 
 void render() {
