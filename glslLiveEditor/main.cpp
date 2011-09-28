@@ -515,6 +515,8 @@ void WinMainCRTStartup()
 		glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 		render();
 		SwapBuffers(hDC);
+
+		Sleep(10);
 	} while (!GetAsyncKeyState(VK_ESCAPE));
 	net_radio_free();
 	finalShaders();
