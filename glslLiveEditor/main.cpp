@@ -244,7 +244,13 @@ void render() {
 		glVertex3f(+50.0f, +125.0f, -205.0f);
 		glVertex3f(-270.0f, +125.0f, -205.0f);
 		glEnd();
-		glTranslatef(-250.0f,110.0f,-200.0f);
+		glTranslatef(-250.0f,120.0f,-200.0f);
+		glPushMatrix();
+		glColor3f(1.0f, 1.0f, 1.0f);
+		glScalef(7.0f, 7.0f, 7.0f);
+		glPrint("| F1: Load | F2: Save | F4: Show/Hide Code | F5: Compile | Esc: Exit | A/S/D/W/Mouse: Move |");
+		glPopMatrix();
+		glTranslatef(0.0f, -15.0f, 0.0f);
 		glScalef(10.0f, 10.0f, 10.0f);
 		textEditor->repaint();
 	}
