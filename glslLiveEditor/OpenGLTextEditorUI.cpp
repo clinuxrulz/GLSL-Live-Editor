@@ -34,9 +34,11 @@ void OpenGLTextEditorUI::paint(TextEditor* textEditor) {
 	glScalef(0.7f, 0.7f, 0.7f);
 	for (int i = max(0, rowOffset); i < min(textEditor->getNumLines(), rowOffset + numVisibleRows); ++i) {
 		glPushMatrix();
+		glTranslatef(0.0f, -0.25f, 0.0f);
+		glColor3f(0.8f, 0.8f, 1.0f);
+		glPrint("%03i:", i+1);
 		if (i == textEditor->getCursorLine()) {
 			glScalef(1.0f, a, 1.0f);
-			glTranslatef(0.0f, -0.25f, 0.0f);
 			red = 0.5f + 0.5f * sin(t * 10.0f); green = 0.8f + 0.2f * sin(t*10.0f); blue = 0.5f + 0.5f * sin(t * 10.0f);
 			red *= (1.0f - redFactor); red += redFactor;
 			green *= (1.0f - redFactor);
@@ -60,7 +62,6 @@ void OpenGLTextEditorUI::paint(TextEditor* textEditor) {
 			glScalef(1.0f, a, 1.0f);
 			glPrint("%s", text2.c_str());
 		} else {
-			glTranslatef(0.0f, -0.25f, 0.0f);
 			red = 0.0f;
 			green = 0.8f;
 			blue = 0.0f;
