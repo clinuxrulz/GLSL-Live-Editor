@@ -82,7 +82,7 @@
     <ClCompile Include="glprint.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="net_radio.cpp" />
-    <ClCompile Include="OpenGLTextEditor.cpp" />
+    <ClCompile Include="OpenGLTextEditorUI.cpp" />
     <ClCompile Include="TextEditor.cpp" />
   </ItemGroup>
   <ItemGroup>

@@ -54,7 +54,7 @@ std::string DefaultTextEditorModel::getLine(int i) {
 
 std::string DefaultTextEditorModel::getText() {
 	std::ostringstream os;
-	for (int i = 0; i < lines.size(); ++i) {
+	for (int i = 0; i < (int)lines.size(); ++i) {
 		os << lines[i] << std::endl;
 	}
 	return os.str();
@@ -106,7 +106,7 @@ void DefaultTextEditorModel::deleteChar() {
 	if (cursorColumn < columnMax) {
 		lines[cursorLine] = lines[cursorLine].substr(0, cursorColumn) + lines[cursorLine].substr(cursorColumn + 1);
 	} else {
-		if (cursorLine < lines.size()-1) {
+		if (cursorLine < (int)lines.size()-1) {
 			lines[cursorLine] = lines[cursorLine] + lines[cursorLine + 1];
 			lines.erase(lines.begin() + cursorLine + 1);
 		}
@@ -137,7 +137,7 @@ void DefaultTextEditorModel::enter() {
 	cursorColumn = 0;
 	lines.insert(lines.begin() + cursorLine, 1, newLine);
 	int pad = 0;
-	while (pad < lines[cursorLine-1].length() && lines[cursorLine-1][pad] == ' ') { ++pad; }
+	while (pad < (int)lines[cursorLine-1].length() && lines[cursorLine-1][pad] == ' ') { ++pad; }
 	lines[cursorLine] = std::string(pad, ' ') + lines[cursorLine];
 	moveCursor(pad, 0);
 }

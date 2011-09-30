@@ -51,7 +51,7 @@ void initGl() {
 	glEnable(GL_COLOR_MATERIAL);
 	buildFont(hDC);
 	textEditorModel = new DefaultTextEditorModel();
-	textEditorUI = new OpenGLTextEditor();
+	textEditorUI = new OpenGLTextEditorUI();
 	textEditor = new TextEditor(textEditorModel, textEditorUI);
 }
 
@@ -160,7 +160,6 @@ void finalGl() {
 }
 
 void updateCamera() {
-	double cmat[16];
 	if (cameraMovingForward) {
 		camera->moveForward(10.0);
 	}
@@ -217,12 +216,12 @@ void setGLSLUniforms() {
 	glUniform1f(time, GetTickCount() / 1000.0f);
 	RECT rect;
 	GetWindowRect(hwnd, &rect);
-	screenWidth = rect.right - rect.left;
-	screenHeight = rect.bottom - rect.top;
+	screenWidth = (float)(rect.right - rect.left);
+	screenHeight = (float)(rect.bottom - rect.top);
 	glUniform3f(unResolution, screenWidth, screenHeight, 0.0f);
-	glUniform3f(cameraForward, camera->getForward().getX(), camera->getForward().getY(), camera->getForward().getZ());
-	glUniform3f(cameraUp, camera->getUp().getX(), camera->getUp().getY(), camera->getUp().getZ());
-	glUniform3f(cameraPos, camera->getPosition().getX(), camera->getPosition().getY(), camera->getPosition().getZ());
+	glUniform3f(cameraForward, (float)camera->getForward().getX(), (float)camera->getForward().getY(), (float)camera->getForward().getZ());
+	glUniform3f(cameraUp, (float)camera->getUp().getX(), (float)camera->getUp().getY(), (float)camera->getUp().getZ());
+	glUniform3f(cameraPos, (float)camera->getPosition().getX(), (float)camera->getPosition().getY(), (float)camera->getPosition().getZ());
 }
 
 void render() {
@@ -303,7 +302,12 @@ void compileShader() {
 		glCompileShader(vertexShader);
 		glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &is_compiled);
 		if (is_compiled == FALSE) {
-			// TODO: set text editor to flash red once
+			textEditorUI->flashRed();
+			int tmp;
+			char buf[256];
+			glGetShaderInfoLog(vertexShader, 255, &tmp, buf);
+			buf[tmp] = 0;
+			textEditorUI->setErrorText(buf);
 			glDeleteShader(vertexShader);
 			vertexShader = -1;
 			return;
@@ -318,7 +322,12 @@ void compileShader() {
 	glCompileShader(fragmentShader);
 	glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &is_compiled);
 	if (is_compiled == FALSE) {
-		// TODO: set text editor to flash red once
+		textEditorUI->flashRed();
+		int tmp;
+		char buf[256];
+		glGetShaderInfoLog(fragmentShader, 255, &tmp, buf);
+		buf[tmp] = 0;
+		textEditorUI->setErrorText(buf);
 		glDeleteShader(fragmentShader);
 		fragmentShader = -1;
 		return;
@@ -333,6 +342,12 @@ void compileShader() {
 	glGetProgramiv(shaderProgram, GL_LINK_STATUS, &is_linked);
 	if (is_linked == FALSE) {
 		// TODO: set text editor to flash red once
+		textEditorUI->flashRed();
+		int tmp;
+		char buf[256];
+		glGetProgramInfoLog(shaderProgram, 255, &tmp, buf);
+		buf[tmp] = 0;
+		textEditorUI->setErrorText(buf);
 		glDetachShader(shaderProgram, vertexShader);
 		glDetachShader(shaderProgram, fragmentShader);
 		glDeleteShader(vertexShader);
@@ -343,6 +358,7 @@ void compileShader() {
 		shaderProgram = -1;
 		return;
 	}
+	textEditorUI->setErrorText("");
 	//vertexShader = glCreateShaderObject
 }
 
