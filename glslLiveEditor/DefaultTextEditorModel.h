@@ -21,9 +21,23 @@ public:
 	virtual void deleteChar();
 	virtual void backspaceChar();
 	virtual void enter();
+	virtual void shiftDown();
+	virtual void shiftUp();
+	virtual bool isTextSelected();
+	virtual int getSelectionStartLine();
+	virtual int getSelectionEndLine();
+	virtual int getSelectionStartColumn();
+	virtual int getSelectionEndColumn();
+	virtual std::string getSelectedText();
+	virtual void setSelectedText(std::string text);
 private:
+	bool shiftIsDown;
 	int cursorLine;
 	int cursorColumn;
+	int selectionStartRow;
+	int selectionStartColumn;
+	int selectionEndRow;
+	int selectionEndColumn;
 	std::vector<std::string> lines;
 };
 

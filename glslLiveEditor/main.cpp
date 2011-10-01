@@ -233,6 +233,7 @@ void render() {
 		updateCamera();
 		glScalef(screenWidth / screenHeight, 1.0f, 1.0f);
 		glRects(-1,-1,1,1);
+		glFlush();
 	}
 	if (showEditor) {
 		glUseProgram(0);
@@ -253,6 +254,7 @@ void render() {
 		glTranslatef(0.0f, -15.0f, 0.0f);
 		glScalef(10.0f, 10.0f, 10.0f);
 		textEditor->repaint();
+		glFlush();
 	}
 }
 
@@ -391,7 +393,10 @@ LRESULT CALLBACK wndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) 
 	}
 	case WM_KEYDOWN:
 		if (showEditor) {
-			if (wParam == VK_DELETE) {
+			if (wParam == VK_SHIFT) {
+				textEditorModel->shiftDown();
+				return 0;
+			} else if (wParam == VK_DELETE) {
 				textEditorModel->deleteChar();
 				return 0;
 			} else if (wParam == VK_UP) {
@@ -432,33 +437,50 @@ LRESULT CALLBACK wndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) 
 				return 0;
 			} else if (wParam == 'W') {
 				cameraMovingForward = true;
+				return 0;
 			} else if (wParam == 'A') {
 				cameraMovingLeft = true;
+				return 0;
 			} else if (wParam == 'D') {
 				cameraMovingRight = true;
+				return 0;
 			} else if (wParam == 'S') {
 				cameraMovingBack = true;
+				return 0;
 			} else if (wParam == VK_SHIFT) {
 				cameraMovingUp = true;
+				return 0;
 			} else if (wParam == VK_CONTROL) {
 				cameraMovingDown = true;
+				return 0;
 			}
 		}
 		break;
 	case WM_KEYUP:
-		if (!showEditor) {
+		if (showEditor) {
+			if (wParam == VK_SHIFT) {
+				textEditorModel->shiftUp();
+				return 0;
+			}
+		} else {
 			if (wParam == 'W') {
 				cameraMovingForward = false;
+				return 0;
 			} else if (wParam == 'A') {
 				cameraMovingLeft = false;
+				return 0;
 			} else if (wParam == 'D') {
 				cameraMovingRight = false;
+				return 0;
 			} else if (wParam == 'S') {
 				cameraMovingBack = false;
+				return 0;
 			} else if (wParam == VK_SHIFT) {
 				cameraMovingUp = false;
+				return 0;
 			} else if (wParam == VK_CONTROL) {
 				cameraMovingDown = false;
+				return 0;
 			}
 		}
 		break;

@@ -19,6 +19,15 @@ public:
 	virtual void deleteChar() = 0;
 	virtual void backspaceChar() = 0;
 	virtual void enter() = 0;
+	virtual void shiftDown() = 0;
+	virtual void shiftUp() = 0;
+	virtual bool isTextSelected() = 0;
+	virtual int getSelectionStartLine() = 0;
+	virtual int getSelectionEndLine() = 0;
+	virtual int getSelectionStartColumn() = 0;
+	virtual int getSelectionEndColumn() = 0;
+	virtual std::string getSelectedText() = 0;
+	virtual void setSelectedText(std::string text) = 0;
 };
 
 #endif // _TEXT_EDITOR_MODEL_H_

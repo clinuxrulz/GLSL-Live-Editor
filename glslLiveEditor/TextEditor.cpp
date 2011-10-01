@@ -52,3 +52,19 @@ static int max(int a, int b) {
 int TextEditor::getCursorColumn() {
 	return min(model->getCursorColumn(), getLine(getCursorLine()).length());
 }
+
+int TextEditor::getSelectionStartLine() {
+	return model->getSelectionStartLine();
+}
+
+int TextEditor::getSelectionStartColumn() {
+	return model->getSelectionStartColumn();
+}
+
+int TextEditor::getSelectionEndLine() {
+	return model->getSelectionEndLine();
+}
+
+int TextEditor::getSelectionEndColumn() {
+	return model->getSelectionEndColumn();
+}

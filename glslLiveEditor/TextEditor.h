@@ -23,6 +23,10 @@ public:
 	std::string getLine(int i);
 	int getCursorLine();
 	int getCursorColumn();
+	int getSelectionStartLine();
+	int getSelectionStartColumn();
+	int getSelectionEndLine();
+	int getSelectionEndColumn();
 };
 
 #endif // _TEXT_EDITOR_H_

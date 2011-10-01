@@ -30,6 +30,11 @@ static int clamp(int x, int a, int b) {
 DefaultTextEditorModel::DefaultTextEditorModel() {
 	cursorLine = 0;
 	cursorColumn = 0;
+	selectionStartRow = -1;
+	selectionStartColumn = -1;
+	selectionEndRow = -1;
+	selectionEndColumn = -1;
+	shiftIsDown = false;
 	lines.resize(1);
 }
 
@@ -85,6 +90,8 @@ void DefaultTextEditorModel::insertText(std::string text) {
 }
 
 void DefaultTextEditorModel::moveCursor(int dx, int dy) {
+	int lastCursorColumn = cursorColumn;
+	int lastCursorLine = cursorLine;
 	cursorColumn += dx;
 	cursorLine = clamp(cursorLine + dy, 0, lines.size()-1);
 	if (cursorColumn < 0) {
@@ -98,6 +105,19 @@ void DefaultTextEditorModel::moveCursor(int dx, int dy) {
 	if (dx != 0 && cursorColumn > (int)lines[cursorLine].length()) {
 		cursorLine = min(cursorLine + 1, lines.size()-1);
 		cursorColumn = 0;
+	}
+	if (shiftIsDown) {
+		if (!isTextSelected()) {
+			selectionStartRow = lastCursorLine;
+			selectionStartColumn = lastCursorColumn;
+		}
+		selectionEndRow = cursorLine;
+		selectionEndColumn = cursorColumn;
+	} else {
+		selectionStartRow = -1;
+		selectionStartColumn = -1;
+		selectionEndRow = -1;
+		selectionEndColumn = -1;
 	}
 }
 
@@ -140,4 +160,72 @@ void DefaultTextEditorModel::enter() {
 	while (pad < (int)lines[cursorLine-1].length() && lines[cursorLine-1][pad] == ' ') { ++pad; }
 	lines[cursorLine] = std::string(pad, ' ') + lines[cursorLine];
 	moveCursor(pad, 0);
+}
+
+void DefaultTextEditorModel::shiftDown() {
+	shiftIsDown = true;
+}
+
+void DefaultTextEditorModel::shiftUp() {
+	shiftIsDown = false;
+}
+
+bool DefaultTextEditorModel::isTextSelected() {
+	return selectionStartRow != -1;
+}
+
+int DefaultTextEditorModel::getSelectionStartLine() {
+	return selectionStartRow;
+}
+
+int DefaultTextEditorModel::getSelectionEndLine() {
+	return selectionEndRow;
+}
+
+int DefaultTextEditorModel::getSelectionStartColumn() {
+	return selectionStartColumn;
+}
+
+int DefaultTextEditorModel::getSelectionEndColumn() {
+	return selectionEndColumn;
+}
+
+std::string DefaultTextEditorModel::getSelectedText() {
+	if (!isTextSelected()) { return ""; }
+	int firstRow;
+	int lastRow;
+	int firstCol;
+	int lastCol;
+	if (selectionStartRow < selectionEndRow) {
+		firstRow = selectionStartRow;
+		firstCol = selectionStartColumn;
+		lastRow = selectionEndRow;
+		lastCol = selectionEndColumn;
+	} else {
+		firstRow = selectionEndRow;
+		firstCol = selectionEndColumn;
+		lastRow = selectionStartRow;
+		lastCol = selectionStartColumn;
+	}
+	if (firstRow == lastRow) {
+		if (firstCol > lastCol) {
+			int tmp = firstCol;
+			firstCol = lastCol;
+			lastCol = tmp;
+		}
+		return lines[firstRow].substr(firstCol, lastCol - firstCol + 1);
+	} else {
+		std::string text = lines[firstRow].substr(firstCol);
+		text += "\n";
+		for (int i = firstRow+1; i < lastRow; ++i) {
+			text += lines[i];
+			text += "\n";
+		}
+		text += lines[lastRow].substr(0, lastCol);
+		return text;
+	}
+}
+
+void DefaultTextEditorModel::setSelectedText(std::string text) {
+
 }
