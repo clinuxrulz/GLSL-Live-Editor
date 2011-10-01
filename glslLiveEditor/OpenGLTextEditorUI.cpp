@@ -101,9 +101,9 @@ void OpenGLTextEditorUI::paint(TextEditor* textEditor) {
 			glScalef(1.0f, a, 1.0f);
 			if (i == textEditor->getSelectionStartLine() && i == textEditor->getSelectionEndLine()) {
 				if (max(textEditor->getSelectionStartColumn(), textEditor->getSelectionEndColumn()) > textEditor->getCursorColumn()) {
-					glColor3f(red, green, blue);
-					glPrint("%s", text2.substr(0, max(textEditor->getSelectionStartColumn(), textEditor->getSelectionEndColumn()) - textEditor->getCursorColumn()).c_str());
 					glColor3f(selRed, selGreen, selBlue);
+					glPrint("%s", text2.substr(0, max(textEditor->getSelectionStartColumn(), textEditor->getSelectionEndColumn()) - textEditor->getCursorColumn()).c_str());
+					glColor3f(red, green, blue);
 					glPrint("%s", text2.substr(max(textEditor->getSelectionStartColumn(), textEditor->getSelectionEndColumn()) - textEditor->getCursorColumn()).c_str());
 				} else {
 					glColor3f(red, green, blue);

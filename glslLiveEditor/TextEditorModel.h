@@ -19,6 +19,7 @@ public:
 	virtual void deleteChar() = 0;
 	virtual void backspaceChar() = 0;
 	virtual void enter() = 0;
+	virtual bool isShiftDown() = 0;
 	virtual void shiftDown() = 0;
 	virtual void shiftUp() = 0;
 	virtual bool isTextSelected() = 0;

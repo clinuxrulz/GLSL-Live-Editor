@@ -74,6 +74,7 @@ int DefaultTextEditorModel::getCursorColumn() {
 }
 
 void DefaultTextEditorModel::insertText(std::string text) {
+	if (isTextSelected()) { setSelectedText(text); return; }
 	std::string text2 = text;
 	bool newLine = false;
 	if (text2[text2.length()-1] == '\n') {
@@ -122,6 +123,7 @@ void DefaultTextEditorModel::moveCursor(int dx, int dy) {
 }
 
 void DefaultTextEditorModel::deleteChar() {
+	if (isTextSelected()) { setSelectedText(""); return; }
 	int columnMax = lines[cursorLine].length();
 	if (cursorColumn < columnMax) {
 		lines[cursorLine] = lines[cursorLine].substr(0, cursorColumn) + lines[cursorLine].substr(cursorColumn + 1);
@@ -134,6 +136,7 @@ void DefaultTextEditorModel::deleteChar() {
 }
 
 void DefaultTextEditorModel::backspaceChar() {
+	if (isTextSelected()) { setSelectedText(""); return; }
 	int columnMax = lines[cursorLine].length();
 	cursorColumn = min(cursorColumn, columnMax);
 	if (cursorColumn > 0) {
@@ -150,6 +153,7 @@ void DefaultTextEditorModel::backspaceChar() {
 }
 
 void DefaultTextEditorModel::enter() {
+	if (isTextSelected()) { setSelectedText("\n"); return; }
 	cursorColumn = min(cursorColumn, lines[cursorLine].length());
 	std::string newLine = lines[cursorLine].substr(cursorColumn);
 	lines[cursorLine] = lines[cursorLine].substr(0, cursorColumn);
@@ -160,6 +164,10 @@ void DefaultTextEditorModel::enter() {
 	while (pad < (int)lines[cursorLine-1].length() && lines[cursorLine-1][pad] == ' ') { ++pad; }
 	lines[cursorLine] = std::string(pad, ' ') + lines[cursorLine];
 	moveCursor(pad, 0);
+}
+
+bool DefaultTextEditorModel::isShiftDown() {
+	return shiftIsDown;
 }
 
 void DefaultTextEditorModel::shiftDown() {
@@ -227,5 +235,62 @@ std::string DefaultTextEditorModel::getSelectedText() {
 }
 
 void DefaultTextEditorModel::setSelectedText(std::string text) {
+	int firstRow;
+	int lastRow;
+	int firstCol;
+	int lastCol;
+	if (selectionStartRow < selectionEndRow) {
+		firstRow = selectionStartRow;
+		firstCol = selectionStartColumn;
+		lastRow = selectionEndRow;
+		lastCol = selectionEndColumn;
+	} else {
+		firstRow = selectionEndRow;
+		firstCol = selectionEndColumn;
+		lastRow = selectionStartRow;
+		lastCol = selectionStartColumn;
+	}
+	if (firstRow == lastRow) {
+		if (firstCol > lastCol) {
+			int tmp = firstCol;
+			firstCol = lastCol;
+			lastCol = tmp;
+		}
+		lines[firstRow] = lines[firstRow].substr(0, firstCol) + text + lines[firstRow].substr(lastCol);
+		expandNewLines(firstRow);
+		selectionStartRow = -1;
+		selectionStartColumn = -1;
+		selectionEndRow = -1;
+		selectionEndColumn = -1;
+		cursorLine = firstRow;
+		cursorColumn = firstCol;
+		if (text.length() > 0) {
+			moveCursor(text.length()-1, 0);
+		}
+	} else {
+		lines[firstRow] = lines[firstRow].substr(0, firstCol) + text;
+		lines[lastRow] = lines[lastRow].substr(lastCol);
+		lines.erase(lines.begin() + firstRow, lines.begin() + lastRow);
+		expandNewLines(firstRow);
+		selectionStartRow = -1;
+		selectionStartColumn = -1;
+		selectionEndRow = -1;
+		selectionEndColumn = -1;
+		cursorLine = firstRow;
+		cursorColumn = firstCol;
+		if (text.length() > 0) {
+			moveCursor(text.length()-1, 0);
+		}
+	}
+}
 
+void DefaultTextEditorModel::expandNewLines(int row) {
+	for (int i = 0; i < lines[row].length(); ++i) {
+		if (lines[row][i] == '\n') {
+			lines.insert(lines.begin() + row + 1, 1, lines[row].substr(i+1));
+			lines[row] = lines[row].substr(0, i);
+			++row;
+			i = 0;
+		}
+	}
 }

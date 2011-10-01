@@ -21,6 +21,7 @@ public:
 	virtual void deleteChar();
 	virtual void backspaceChar();
 	virtual void enter();
+	virtual bool isShiftDown();
 	virtual void shiftDown();
 	virtual void shiftUp();
 	virtual bool isTextSelected();
@@ -31,6 +32,7 @@ public:
 	virtual std::string getSelectedText();
 	virtual void setSelectedText(std::string text);
 private:
+	void expandNewLines(int row);
 	bool shiftIsDown;
 	int cursorLine;
 	int cursorColumn;

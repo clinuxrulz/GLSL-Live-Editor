@@ -379,10 +379,20 @@ LRESULT CALLBACK wndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) 
 			char c = (char)wParam;
 			if (c >= 32 && c <= 128) {
 				textEditorModel->insertText(std::string() + c);
+				bool isShiftDown = textEditorModel->isShiftDown();
+				textEditorModel->shiftUp();
 				textEditorModel->moveCursor(+1, +0);
+				if (isShiftDown) {
+					textEditorModel->shiftDown();
+				}
 			} else if (c == '\t') {
 				textEditorModel->insertText("  ");
+				bool isShiftDown = textEditorModel->isShiftDown();
+				textEditorModel->shiftUp();
 				textEditorModel->moveCursor(+2, +0);
+				if (isShiftDown) {
+					textEditorModel->shiftDown();
+				}
 			} else if (c == 13) {
 				textEditorModel->enter();
 			} else if (c == 8) {
