@@ -38,6 +38,7 @@ static int shaderProgram  = -1;
 static int vertexShader   = -1;
 static int fragmentShader = -1;
 
+static bool fullscreen = true;
 static bool showEditor = true;
 
 void initGl() {
@@ -212,6 +213,7 @@ static float screenWidth, screenHeight;
 void setGLSLUniforms() {
 	int time = glGetUniformLocation(shaderProgram, "time");
 	int unResolution = glGetUniformLocation(shaderProgram, "unResolution");
+	int resolution = glGetUniformLocation(shaderProgram, "resolution");
 	int cameraForward = glGetUniformLocation(shaderProgram, "cameraForward");
 	int cameraUp = glGetUniformLocation(shaderProgram, "cameraUp");
 	int cameraPos = glGetUniformLocation(shaderProgram, "cameraPos");
@@ -221,6 +223,7 @@ void setGLSLUniforms() {
 	screenWidth = (float)(rect.right - rect.left);
 	screenHeight = (float)(rect.bottom - rect.top);
 	glUniform3f(unResolution, screenWidth, screenHeight, 0.0f);
+	glUniform3f(resolution, screenWidth, screenHeight, 0.0f);
 	glUniform3f(cameraForward, (float)camera->getForward().getX(), (float)camera->getForward().getY(), (float)camera->getForward().getZ());
 	glUniform3f(cameraUp, (float)camera->getUp().getX(), (float)camera->getUp().getY(), (float)camera->getUp().getZ());
 	glUniform3f(cameraPos, (float)camera->getPosition().getX(), (float)camera->getPosition().getY(), (float)camera->getPosition().getZ());
@@ -238,6 +241,11 @@ void render() {
 		glFlush();
 	}
 	if (showEditor) {
+		RECT rect;
+		GetWindowRect(hwnd, &rect);
+		screenWidth = (float)(rect.right - rect.left);
+		screenHeight = (float)(rect.bottom - rect.top);
+		float screenScale = screenWidth / 1366.0;
 		glUseProgram(0);
 		glLoadIdentity();
 		glColor4f(0.0f,0.0f,0.0f,0.9f);
@@ -247,11 +255,12 @@ void render() {
 		glVertex3f(+50.0f, +125.0f, -205.0f);
 		glVertex3f(-270.0f, +125.0f, -205.0f);
 		glEnd();
-		glTranslatef(-250.0f,120.0f,-200.0f);
+		glScalef(screenScale, screenScale, 1.0f);
+		glTranslatef(-250.0f,120.0f-15.0f,-200.0f);
 		glPushMatrix();
 		glColor3f(1.0f, 1.0f, 1.0f);
 		glScalef(7.0f, 7.0f, 7.0f);
-		glPrint("| F1: Load | F2: Save | F4: Show/Hide Code | F5: Compile | Esc: Exit | A/S/D/W/Mouse: Move |");
+		glPrint("| F1: Load | F2: Save | F4: Show/Hide Code | F5: Compile | Esc: Exit | A/S/D/W/Mouse: Move | F9: Windowed/Fullscreen |");
 		glPopMatrix();
 		glTranslatef(0.0f, -15.0f, 0.0f);
 		glScalef(10.0f, 10.0f, 10.0f);
@@ -429,6 +438,27 @@ LRESULT CALLBACK wndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) 
 		return 0;
 	}
 	case WM_KEYDOWN:
+		if (wParam == VK_F9) {
+			fullscreen = !fullscreen;
+			if (fullscreen) {
+				RECT rect;
+				HWND hdesktop = GetDesktopWindow();
+				GetWindowRect(hdesktop, &rect);
+				DWORD dwWidth = rect.right - rect.left;
+				DWORD dwHeight = rect.bottom - rect.top;
+				SetWindowLong(hwnd, GWL_STYLE, WS_POPUP | WS_VISIBLE | WS_MAXIMIZE);
+				SetWindowPos(hwnd, NULL, 0, 0, dwWidth, dwHeight, SWP_NOZORDER);
+				GetWindowRect(hwnd, &rect);
+				reshape(rect.right - rect.left, rect.bottom - rect.top);
+			} else {
+				RECT rect;
+				SetWindowLong(hwnd, GWL_STYLE, WS_VISIBLE | WS_BORDER | WS_THICKFRAME | WS_OVERLAPPEDWINDOW | WS_MINIMIZEBOX);
+				SetWindowPos(hwnd, NULL, 0, 0, 1024, 768, SWP_NOZORDER);
+				GetWindowRect(hwnd, &rect);
+				reshape(rect.right - rect.left, rect.bottom - rect.top);
+			}
+			return 0;
+		}
 		if (showEditor) {
 			if (wParam == VK_CONTROL) {
 				controlDown = true;
