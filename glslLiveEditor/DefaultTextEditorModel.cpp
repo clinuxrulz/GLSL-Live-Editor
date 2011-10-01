@@ -75,19 +75,15 @@ int DefaultTextEditorModel::getCursorColumn() {
 
 void DefaultTextEditorModel::insertText(std::string text) {
 	if (isTextSelected()) { setSelectedText(text); return; }
-	std::string text2 = text;
-	bool newLine = false;
-	if (text2[text2.length()-1] == '\n') {
-		text2 = text2.substr(0, text2.length()-1);
-		newLine = true;
+	lines[cursorLine] = lines[cursorLine].substr(0, cursorColumn) + text + lines[cursorLine].substr(cursorColumn);
+	expandNewLines(cursorLine);
+	for (int i = 0; i < text.length(); ++i) {
+		moveCursor(1, 0);
 	}
-	cursorColumn = min(cursorColumn, lines[cursorLine].length());
-	lines[cursorLine].insert(cursorColumn, text2);
-	if (newLine) {
-		cursorColumn = 0;
-		lines.insert(lines.begin() + cursorLine + 1, 1, std::string(""));
-		++cursorLine;
-	}
+	selectionStartRow = -1;
+	selectionStartColumn = -1;
+	selectionEndRow = -1;
+	selectionEndColumn = -1;
 }
 
 void DefaultTextEditorModel::moveCursor(int dx, int dy) {
@@ -235,6 +231,7 @@ std::string DefaultTextEditorModel::getSelectedText() {
 }
 
 void DefaultTextEditorModel::setSelectedText(std::string text) {
+	if (!isTextSelected()) { return; }
 	int firstRow;
 	int lastRow;
 	int firstCol;
@@ -265,7 +262,9 @@ void DefaultTextEditorModel::setSelectedText(std::string text) {
 		cursorLine = firstRow;
 		cursorColumn = firstCol;
 		if (text.length() > 0) {
-			moveCursor(text.length()-1, 0);
+			for (int i = 0; i < text.length(); ++i) {
+				moveCursor(1, 0);
+			}
 		}
 	} else {
 		lines[firstRow] = lines[firstRow].substr(0, firstCol) + text;
@@ -279,7 +278,9 @@ void DefaultTextEditorModel::setSelectedText(std::string text) {
 		cursorLine = firstRow;
 		cursorColumn = firstCol;
 		if (text.length() > 0) {
-			moveCursor(text.length()-1, 0);
+			for (int i = 0; i < text.length(); ++i) {
+				moveCursor(1, 0);
+			}
 		}
 	}
 }

@@ -32,6 +32,8 @@ static bool cameraMovingRight = false;
 static bool cameraMovingUp = false;
 static bool cameraMovingDown = false;
 
+static bool controlDown = false;
+
 static int shaderProgram  = -1;
 static int vertexShader   = -1;
 static int fragmentShader = -1;
@@ -377,33 +379,61 @@ LRESULT CALLBACK wndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) 
 	case WM_CHAR: {
 		if (showEditor) {
 			char c = (char)wParam;
-			if (c >= 32 && c <= 128) {
-				textEditorModel->insertText(std::string() + c);
-				bool isShiftDown = textEditorModel->isShiftDown();
-				textEditorModel->shiftUp();
-				textEditorModel->moveCursor(+1, +0);
-				if (isShiftDown) {
-					textEditorModel->shiftDown();
+			if (controlDown) {
+				if (c == 'x'-'a'+1) {
+					std::string text = textEditorModel->getSelectedText();
+					if (OpenClipboard(NULL)) {
+						EmptyClipboard();
+						HGLOBAL hMem = GlobalAlloc(GMEM_DDESHARE, text.length() + 1);
+						char *ptxt = (char*)GlobalLock(hMem);
+						strcpy_s(ptxt, text.length() + 1, text.c_str());
+						GlobalUnlock(hMem);
+						SetClipboardData(CF_TEXT, hMem);
+						CloseClipboard();
+						textEditorModel->setSelectedText("");
+					}
+				} else if (c == 'c'-'a'+1) {
+					std::string text = textEditorModel->getSelectedText();
+					if (OpenClipboard(NULL)) {
+						EmptyClipboard();
+						HGLOBAL hMem = GlobalAlloc(GMEM_DDESHARE, text.length() + 1);
+						char *ptxt = (char*)GlobalLock(hMem);
+						strcpy_s(ptxt, text.length() + 1, text.c_str());
+						GlobalUnlock(hMem);
+						SetClipboardData(CF_TEXT, hMem);
+						CloseClipboard();
+					}
+				} else if (c == 'v'-'a'+1) {
+					std::string text;
+					if (OpenClipboard(NULL)) {
+						HGLOBAL hMem = GetClipboardData(CF_TEXT);
+						char *ptxt = (char*)GlobalLock(hMem);
+						text = ptxt;
+						GlobalUnlock(hMem);
+						CloseClipboard();
+						textEditorModel->insertText(text);
+					}
 				}
-			} else if (c == '\t') {
-				textEditorModel->insertText("  ");
-				bool isShiftDown = textEditorModel->isShiftDown();
-				textEditorModel->shiftUp();
-				textEditorModel->moveCursor(+2, +0);
-				if (isShiftDown) {
-					textEditorModel->shiftDown();
+			} else {
+				if (c >= 32 && c <= 128) {
+					textEditorModel->insertText(std::string() + c);
+				} else if (c == '\t') {
+					textEditorModel->insertText("  ");
+				} else if (c == 13) {
+					textEditorModel->enter();
+				} else if (c == 8) {
+					textEditorModel->backspaceChar();
 				}
-			} else if (c == 13) {
-				textEditorModel->enter();
-			} else if (c == 8) {
-				textEditorModel->backspaceChar();
 			}
 		}
 		return 0;
 	}
 	case WM_KEYDOWN:
 		if (showEditor) {
-			if (wParam == VK_SHIFT) {
+			if (wParam == VK_CONTROL) {
+				controlDown = true;
+				return 0;
+			} else if (wParam == VK_SHIFT) {
 				textEditorModel->shiftDown();
 				return 0;
 			} else if (wParam == VK_DELETE) {
@@ -468,7 +498,10 @@ LRESULT CALLBACK wndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) 
 		break;
 	case WM_KEYUP:
 		if (showEditor) {
-			if (wParam == VK_SHIFT) {
+			if (wParam == VK_CONTROL) {
+				controlDown = false;
+				return 0;
+			} else if (wParam == VK_SHIFT) {
 				textEditorModel->shiftUp();
 				return 0;
 			}
