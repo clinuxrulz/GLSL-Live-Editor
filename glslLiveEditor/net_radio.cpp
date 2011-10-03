@@ -148,3 +148,7 @@ bool net_radio_updateBuffering() {
 void net_radio_free() {
 	BASS_Free();
 }
+
+void net_radio_getFftData1024Floats(float* data) {
+	BASS_ChannelGetData(chan, data, BASS_DATA_FFT2048);
+}

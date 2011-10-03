@@ -23,6 +23,14 @@ static TextEditorModel* textEditorModel;
 static TextEditorUI* textEditorUI;
 static TextEditor* textEditor;
 
+static const int fftImageWidth = 32;
+static const int fftImageHeight = 32;
+static const int fftChannelCount = 4;
+static const int fftDataSize = fftImageWidth * fftImageHeight * fftChannelCount;
+static const int fftPixelFormat = GL_BGRA;
+static GLuint fftPbo;
+static GLuint fftTextureId;
+
 static Camera* camera = NULL;
 
 static bool cameraMovingForward = false;
@@ -42,6 +50,7 @@ static bool fullscreen = true;
 static bool showEditor = true;
 
 void initGl() {
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 	glHint(GL_POINT_SMOOTH_HINT, GL_NICEST);
 	glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
 	glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST);
@@ -107,6 +116,7 @@ PFNGLCOMPILESHADERPROC glCompileShader = NULL;
 PFNGLATTACHSHADERPROC glAttachShader = NULL;
 PFNGLLINKPROGRAMPROC glLinkProgram = NULL;
 PFNGLUSEPROGRAMPROC glUseProgram = NULL;
+PFNGLUNIFORM1IPROC glUniform1i = NULL;
 PFNGLUNIFORM1FPROC glUniform1f = NULL;
 PFNGLUNIFORM3FPROC glUniform3f = NULL;
 PFNGLDETACHSHADERPROC glDetachShader = NULL;
@@ -117,6 +127,14 @@ PFNGLGETPROGRAMIVPROC glGetProgramiv = NULL;
 PFNGLGETSHADERINFOLOGPROC glGetShaderInfoLog = NULL;
 PFNGLGETPROGRAMINFOLOGPROC glGetProgramInfoLog = NULL;
 PFNGLGETUNIFORMLOCATIONPROC glGetUniformLocation = NULL;
+PFNGLGENBUFFERSPROC glGenBuffers = NULL;
+PFNGLBINDBUFFERPROC glBindBuffer = NULL;
+PFNGLBUFFERDATAPROC glBufferData = NULL;
+PFNGLBUFFERSUBDATAPROC glBufferSubData = NULL;
+PFNGLDELETEBUFFERSPROC glDeleteBuffers = NULL;
+PFNGLGETBUFFERPARAMETERIVPROC glGetBufferParameteriv = NULL;
+PFNGLMAPBUFFERPROC glMapBuffer = NULL;
+PFNGLUNMAPBUFFERPROC glUnmapBuffer = NULL;
 
 static void initShaders() {
 	glCreateShader = (PFNGLCREATESHADERPROC)wglGetProcAddress("glCreateShader");
@@ -126,6 +144,7 @@ static void initShaders() {
 	glAttachShader = (PFNGLATTACHSHADERPROC)wglGetProcAddress("glAttachShader");
 	glLinkProgram = (PFNGLLINKPROGRAMPROC)wglGetProcAddress("glLinkProgram");
 	glUseProgram = (PFNGLUSEPROGRAMPROC)wglGetProcAddress("glUseProgram");
+	glUniform1i = (PFNGLUNIFORM1IPROC)wglGetProcAddress("glUniform1i");
 	glUniform1f = (PFNGLUNIFORM1FPROC)wglGetProcAddress("glUniform1f");
 	glUniform3f = (PFNGLUNIFORM3FPROC)wglGetProcAddress("glUniform3f");
 	glDetachShader = (PFNGLDETACHSHADERPROC)wglGetProcAddress("glDetachShader");
@@ -136,6 +155,14 @@ static void initShaders() {
 	glGetShaderInfoLog = (PFNGLGETSHADERINFOLOGPROC)wglGetProcAddress("glGetShaderInfoLog");
 	glGetProgramInfoLog = (PFNGLGETPROGRAMINFOLOGPROC)wglGetProcAddress("glGetProgramInfoLog");
 	glGetUniformLocation = (PFNGLGETUNIFORMLOCATIONPROC)wglGetProcAddress("glGetUniformLocation");
+	glGenBuffers = (PFNGLGENBUFFERSPROC)wglGetProcAddress("glGenBuffers");
+	glBindBuffer = (PFNGLBINDBUFFERPROC)wglGetProcAddress("glBindBuffer");
+	glBufferData = (PFNGLBUFFERDATAPROC)wglGetProcAddress("glBufferData");
+	glBufferSubData = (PFNGLBUFFERSUBDATAPROC)wglGetProcAddress("glBufferSubData");
+	glDeleteBuffers = (PFNGLDELETEBUFFERSPROC)wglGetProcAddress("glDeleteBuffers");
+	glGetBufferParameteriv = (PFNGLGETBUFFERPARAMETERIVPROC)wglGetProcAddress("glGetBufferParameteriv");
+	glMapBuffer = (PFNGLMAPBUFFERPROC)wglGetProcAddress("glMapBuffer");
+	glUnmapBuffer = (PFNGLUNMAPBUFFERPROC)wglGetProcAddress("glUnmapBuffer");
 }
 
 static void finalShaders() {
@@ -149,6 +176,26 @@ static void finalShaders() {
 		fragmentShader = -1;
 		shaderProgram = -1;
 	}
+}
+
+void initFftData() {
+	glGenTextures(1, &fftTextureId);
+	glBindTexture(GL_TEXTURE_2D, fftTextureId);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, fftImageWidth, fftImageHeight, 0, fftPixelFormat, GL_UNSIGNED_BYTE, NULL);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glGenBuffers(1, &fftPbo);
+	glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, fftPbo);
+	glBufferData(GL_PIXEL_UNPACK_BUFFER_ARB, fftDataSize, 0, GL_STREAM_DRAW);
+	glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, 0);
+}
+
+void freeFftData() {
+	glDeleteTextures(1, &fftTextureId);
+	glDeleteBuffers(1, &fftPbo);
 }
 
 void reshape(int w, int h) {
@@ -213,6 +260,8 @@ void updateCamera() {
 
 static float screenWidth, screenHeight;
 
+void updateGLSLFftUniform();
+
 void setGLSLUniforms() {
 	int time = glGetUniformLocation(shaderProgram, "time");
 	int unResolution = glGetUniformLocation(shaderProgram, "unResolution");
@@ -220,6 +269,7 @@ void setGLSLUniforms() {
 	int cameraForward = glGetUniformLocation(shaderProgram, "cameraForward");
 	int cameraUp = glGetUniformLocation(shaderProgram, "cameraUp");
 	int cameraPos = glGetUniformLocation(shaderProgram, "cameraPos");
+	updateGLSLFftUniform();
 	glUniform1f(time, GetTickCount() / 1000.0f);
 	RECT rect;
 	GetWindowRect(hwnd, &rect);
@@ -232,15 +282,53 @@ void setGLSLUniforms() {
 	glUniform3f(cameraPos, (float)camera->getPosition().getX(), (float)camera->getPosition().getY(), (float)camera->getPosition().getZ());
 }
 
+void updateFftData(GLubyte* ptr);
+
+void updateGLSLFftUniform() {
+	glBindTexture(GL_TEXTURE_2D, fftTextureId);
+	glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, fftPbo);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, fftImageWidth, fftImageHeight, fftPixelFormat, GL_UNSIGNED_BYTE, 0);
+	glBufferData(GL_PIXEL_UNPACK_BUFFER_ARB, fftDataSize, 0, GL_STREAM_DRAW);
+	GLubyte* ptr = (GLubyte*)glMapBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, GL_WRITE_ONLY_ARB);
+	if (ptr) {
+		updateFftData(ptr);
+		glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER_ARB);
+	}
+	glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, 0);
+	int fft = glGetUniformLocation(shaderProgram, "fft");
+	glUniform1i(fft, fftTextureId);
+}
+
+void updateFftData(GLubyte* ptr) {
+	static float data[1024];
+	net_radio_getFftData1024Floats(data);
+	for (int i = 0; i < 1024; ++i) {
+		data[i] = sqrt(data[i]) * 3.0f * 255.0f - 4.0f;
+		data[i] = min(max(data[i], 0.0f), 255.0f);
+	}
+	int k = 0;
+	for (int i = 0; i < fftImageHeight; ++i) {
+		for (int j = 0; j < fftImageWidth; ++j) {
+			ptr[k+0] = (GLubyte)(data[((i << 5) + j) & 1023]);
+			ptr[k+1] = (GLubyte)(data[((i << 5) + j) & 1023]);
+			ptr[k+2] = (GLubyte)(data[((i << 5) + j) & 1023]);
+			ptr[k+3] = 255;
+			k += 4;
+		}
+	}
+}
+
 void render() {
 	if (shaderProgram != -1) {
 		glUseProgram(shaderProgram);
+		glBindTexture(GL_TEXTURE_2D, fftTextureId);
 		setGLSLUniforms();
 		glColor3f(1.0f,0.0f,0.0f);
 		glLoadIdentity();
 		updateCamera();
 		glScalef(screenWidth / screenHeight, 1.0f, 1.0f);
 		glRects(-1,-1,1,1);
+		glBindTexture(GL_TEXTURE_2D, 0);
 		glFlush();
 	}
 	if (showEditor) {
@@ -248,15 +336,15 @@ void render() {
 		GetWindowRect(hwnd, &rect);
 		screenWidth = (float)(rect.right - rect.left);
 		screenHeight = (float)(rect.bottom - rect.top);
-		float screenScale = screenWidth / 1366.0;
+		float screenScale = screenWidth / 1366.0f;
 		glUseProgram(0);
 		glLoadIdentity();
 		glColor4f(0.0f,0.0f,0.0f,0.9f);
 		glBegin(GL_QUADS);
-		glVertex3f(-270.0f, -125.0f, -205.0f);
-		glVertex3f(+50.0f, -125.0f, -205.0f);
-		glVertex3f(+50.0f, +125.0f, -205.0f);
-		glVertex3f(-270.0f, +125.0f, -205.0f);
+		glVertex3f(-270.0f, -200.0f, -205.0f);
+		glVertex3f(+50.0f, -200.0f, -205.0f);
+		glVertex3f(+50.0f, +200.0f, -205.0f);
+		glVertex3f(-270.0f, +200.0f, -205.0f);
 		glEnd();
 		glTranslatef(-250.0f*screenScale,120.0f-15.0f,-200.0f);
 		glPushMatrix();
@@ -613,6 +701,7 @@ void WinMainCRTStartup()
 	initGl();
 	initStartingCode();
 	initShaders();
+	initFftData();
 	net_radio_init(hwnd);
 	net_radio_openUrl("http://www.subflow.net:8000/listen.pls");
 	bool net_radio_buffering = true;
@@ -638,6 +727,7 @@ void WinMainCRTStartup()
 		Sleep(10);
 	} while (!GetAsyncKeyState(VK_ESCAPE));
 	net_radio_free();
+	freeFftData();
 	finalShaders();
 	finalGl();
 	delete camera;
