@@ -42,6 +42,9 @@ static bool fullscreen = true;
 static bool showEditor = true;
 
 void initGl() {
+	glHint(GL_POINT_SMOOTH_HINT, GL_NICEST);
+	glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+	glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST);
 	glShadeModel(GL_SMOOTH);
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 	glClearDepth(1.0f);
@@ -255,15 +258,14 @@ void render() {
 		glVertex3f(+50.0f, +125.0f, -205.0f);
 		glVertex3f(-270.0f, +125.0f, -205.0f);
 		glEnd();
-		glScalef(screenScale, screenScale, 1.0f);
-		glTranslatef(-250.0f,120.0f-15.0f,-200.0f);
+		glTranslatef(-250.0f*screenScale,120.0f-15.0f,-200.0f);
 		glPushMatrix();
 		glColor3f(1.0f, 1.0f, 1.0f);
-		glScalef(7.0f, 7.0f, 7.0f);
+		glScalef(5.0f, 5.0f, 5.0f);
 		glPrint("| F1: Load | F2: Save | F4: Show/Hide Code | F5: Compile | Esc: Exit | A/S/D/W/Mouse: Move | F9: Windowed/Fullscreen |");
 		glPopMatrix();
 		glTranslatef(0.0f, -15.0f, 0.0f);
-		glScalef(10.0f, 10.0f, 10.0f);
+		glScalef(8.0f, 8.0f, 8.0f);
 		textEditor->repaint();
 		glFlush();
 	}

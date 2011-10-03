@@ -75,6 +75,7 @@ int DefaultTextEditorModel::getCursorColumn() {
 
 void DefaultTextEditorModel::insertText(std::string text) {
 	if (isTextSelected()) { setSelectedText(text); return; }
+	if (cursorColumn > lines[cursorLine].length()) { cursorColumn = lines[cursorLine].length(); }
 	lines[cursorLine] = lines[cursorLine].substr(0, cursorColumn) + text + lines[cursorLine].substr(cursorColumn);
 	expandNewLines(cursorLine);
 	for (int i = 0; i < text.length(); ++i) {
