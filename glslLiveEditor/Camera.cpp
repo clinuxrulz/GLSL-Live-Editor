@@ -10,33 +10,27 @@ static double degreesToRadians(double degrees) {
 }
 
 void Camera::moveLeft(double distance) {
-	vec3 left;
-	left.cross(up, forward);
-	left *= distance;
-	position += left;
+	setPosition(*position + up->cross(*forward) * distance);
 }
 
 void Camera::moveRight(double distance) {
-	vec3 right;
-	right.cross(forward, up);
-	right *= distance;
-	position += right;
+	setPosition(*position + forward->cross(*up) * distance);
 }
 
 void Camera::moveUp(double distance) {
-	position += (vec3(up) *= distance);
+	setPosition(*position + *up * distance);
 }
 
 void Camera::moveDown(double distance) {
-	position += (vec3(up) *= -distance);
+	setPosition(*position + *up * -distance);
 }
 
 void Camera::moveForward(double distance) {
-	position += (vec3(forward) *= distance);
+	setPosition(*position + *forward * distance);
 }
 
 void Camera::moveBack(double distance) {
-	position += (vec3(forward) *= -distance);
+	setPosition(*position + *forward * -distance);
 }
 
 void Camera::turnUp(double deltaAngle) {
@@ -47,8 +41,8 @@ void Camera::turnDown(double deltaAngle) {
 	deltaAngle = degreesToRadians(deltaAngle);
 	double ca = cos(deltaAngle);
 	double sa = sin(deltaAngle);
-	forward = ((vec3(forward) *= ca) -= (vec3(up) *= sa));
-	up = ((vec3(up) *= ca) += (vec3(forward) *= sa));
+	setForward(*forward * ca - *up * sa);
+	setUp(*up * ca + *forward * sa);
 	orthonormalize();
 }
 
@@ -60,16 +54,14 @@ void Camera::turnLeft(double deltaAngle) {
 	deltaAngle = degreesToRadians(deltaAngle);
 	double ca = cos(deltaAngle);
 	double sa = sin(deltaAngle);
-	vec3 right;
-	right.cross(forward, up);
-	forward = ((vec3(forward) *= ca) -= (vec3(right) *= sa));
+	Vec3 right = forward->cross(*up);
+	setForward(*forward * ca - right * sa);
 	orthonormalize();
 }
 
 void Camera::orthonormalize() {
-	vec3 right;
-	right.cross(forward, up);
-	forward.cross(up, right);
-	up.normalize();
-	forward.normalize();
+	Vec3 right = forward->cross(*up);
+	setForward(up->cross(right));
+	setUp(up->normalize());
+	setForward(forward->normalize());
 }

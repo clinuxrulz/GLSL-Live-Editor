@@ -1,26 +1,32 @@
 #ifndef _CAMERA_H_
 #define _CAMERA_H_
 
-#include "vec3.h"
+#include "Vec3.h"
 
 class Camera {
 public:
 	Camera() {
 		depth = 400.0;
-		position.set(0.0, 60.0, 60.0);
-		up.set(0.0, 1.0, 0.0);
-		forward.set(0.0, 0.0, -1.0);
+		position = new Vec3(0, 60, 0);
+		up = new Vec3(0, 1, 0);
+		forward = new Vec3(0, 0, -1);
+	}
+
+	~Camera() {
+		delete position;
+		delete up;
+		delete forward;
 	}
 
 	double getDepth() const { return depth; }
-	vec3 getPosition() const { return position; }
-	vec3 getUp() const { return up; }
-	vec3 getForward() const { return forward; }
+	Vec3 getPosition() const { return *position; }
+	Vec3 getUp() const { return *up; }
+	Vec3 getForward() const { return *forward; }
 
 	void setDepth(double depth) { this->depth = depth; }
-	void setPosition(const vec3& position) { this->position = position; }
-	void setUp(const vec3& up) { this->up = up; }
-	void setForward(const vec3& forward) { this->forward = forward; }
+	void setPosition(const Vec3& position) { delete this->position; this->position = new Vec3(position); }
+	void setUp(const Vec3& up) { delete this->up; this->up = new Vec3(up); }
+	void setForward(const Vec3& forward) { delete this->forward; this->forward = new Vec3(forward); }
 
 	void moveLeft(double distance);
 	void moveRight(double distance);
@@ -37,9 +43,9 @@ private:
 	void orthonormalize();
 
 	double depth;
-	vec3 position;
-	vec3 up;
-	vec3 forward;
+	Vec3* position;
+	Vec3* up;
+	Vec3* forward;
 };
 
 #endif // _CAMERA_H_

@@ -49,6 +49,9 @@ static int fragmentShader = -1;
 static bool fullscreen = true;
 static bool showEditor = true;
 
+static int fullscreenWidth = 1024;
+static int fullscreenHeight = 768;
+
 void initGl() {
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 	glHint(GL_POINT_SMOOTH_HINT, GL_NICEST);
@@ -65,9 +68,18 @@ void initGl() {
 	glEnable(GL_LIGHTING);
 	glEnable(GL_COLOR_MATERIAL);
 	buildFont(hDC);
+}
+
+void initTextEditor() {
 	textEditorModel = new DefaultTextEditorModel();
 	textEditorUI = new OpenGLTextEditorUI();
 	textEditor = new TextEditor(textEditorModel, textEditorUI);
+}
+
+void finalTextEditor() {
+	delete textEditor;
+	delete textEditorModel;
+	delete textEditorUI;
 }
 
 void initStartingCode() {
@@ -102,7 +114,7 @@ void initStartingCode() {
 	textEditorModel->insertText("void main() {\n");
 	textEditorModel->insertText("  vec3 ro, rd;\n");
 	textEditorModel->insertText("  getRay(ro, rd);\n");
-	textEditorModel->insertText("  vec3 col = vec3(0.0);\n");
+	textEditorModel->insertText("  vec3 col = vec3(0.5);\n");
 	textEditorModel->insertText("  \n");
 	textEditorModel->insertText("  gl_FragColor = vec4(col, 1.0);\n");
 	textEditorModel->insertText("}\n");
@@ -203,13 +215,17 @@ void reshape(int w, int h) {
 	glLoadIdentity();
 	gluPerspective(75.0f, (float)w / (float)h, 100.0, 100000.0);
 	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+}
+
+double calcScreenDist(int w, int h) {
+	// tan(0.5 * a) = (0.5 * h) / dist
+	// dist = (0.5 * h) / tan(0.5 * a)
+	return 0.5 * h / tan(0.5 * 75.0 * 3.141592 / 180.0);
 }
 
 void finalGl() {
 	killFont();
-	delete textEditor;
-	delete textEditorModel;
-	delete textEditorUI;
 }
 
 void updateCamera() {
@@ -326,8 +342,16 @@ void render() {
 		glColor3f(1.0f,0.0f,0.0f);
 		glLoadIdentity();
 		updateCamera();
-		glScalef(screenWidth / screenHeight, 1.0f, 1.0f);
-		glRects(-1,-1,1,1);
+		double x1 = -1.0;
+		double y1 = -1.0;
+		double x2 = 1.0;
+		double y2 = 1.0;
+		glBegin(GL_QUADS);
+		glVertex3d(x1, y1, -1.0);
+		glVertex3d(x1, y2, -1.0);
+		glVertex3d(x2, y2, -1.0);
+		glVertex3d(x2, y1, -1.0);
+		glEnd();
 		glBindTexture(GL_TEXTURE_2D, 0);
 		glFlush();
 	}
@@ -336,24 +360,30 @@ void render() {
 		GetWindowRect(hwnd, &rect);
 		screenWidth = (float)(rect.right - rect.left);
 		screenHeight = (float)(rect.bottom - rect.top);
-		float screenScale = screenWidth / 1366.0f;
+		double screenDist = calcScreenDist(screenWidth, screenHeight);
 		glUseProgram(0);
+		reshape(screenWidth, screenHeight);
 		glLoadIdentity();
 		glColor4f(0.0f,0.0f,0.0f,0.9f);
+		double x1 = -screenWidth * 0.45;
+		double y1 = -screenHeight * 0.45;
+		double x2 = +screenWidth * 0.45;
+		double y2 = +screenHeight * 0.45;
 		glBegin(GL_QUADS);
-		glVertex3f(-270.0f, -200.0f, -205.0f);
-		glVertex3f(+50.0f, -200.0f, -205.0f);
-		glVertex3f(+50.0f, +200.0f, -205.0f);
-		glVertex3f(-270.0f, +200.0f, -205.0f);
+		glVertex3d(x1, y1, -screenDist);
+		glVertex3d(x1, y2, -screenDist);
+		glVertex3d(x2, y2, -screenDist);
+		glVertex3d(x2, y1, -screenDist);
 		glEnd();
-		glTranslatef(-250.0f*screenScale,120.0f-15.0f,-200.0f);
+		double a = screenHeight / 1080.0;
+		glTranslatef(-screenWidth * 0.42, +screenHeight * 0.42, -screenDist);
 		glPushMatrix();
 		glColor3f(1.0f, 1.0f, 1.0f);
-		glScalef(5.0f, 5.0f, 5.0f);
+		glScalef(30.0f * a, 30.0f * a, 30.0f * a);
 		glPrint("| F1: Load | F2: Save | F4: Show/Hide Code | F5: Compile | Esc: Exit | A/S/D/W/Mouse: Move | F9: Windowed/Fullscreen |");
 		glPopMatrix();
 		glTranslatef(0.0f, -15.0f, 0.0f);
-		glScalef(8.0f, 8.0f, 8.0f);
+		glScalef(30.0f * a, 30.0f * a, 30.0f * a);
 		textEditor->repaint();
 		glFlush();
 	}
@@ -530,23 +560,26 @@ LRESULT CALLBACK wndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) 
 	case WM_KEYDOWN:
 		if (wParam == VK_F9) {
 			fullscreen = !fullscreen;
+			//finalShaders();
+			//finalGl();
+			RECT rect;
 			if (fullscreen) {
-				RECT rect;
 				HWND hdesktop = GetDesktopWindow();
 				GetWindowRect(hdesktop, &rect);
 				DWORD dwWidth = rect.right - rect.left;
 				DWORD dwHeight = rect.bottom - rect.top;
 				SetWindowLong(hwnd, GWL_STYLE, WS_POPUP | WS_VISIBLE | WS_MAXIMIZE);
 				SetWindowPos(hwnd, NULL, 0, 0, dwWidth, dwHeight, SWP_NOZORDER);
-				GetWindowRect(hwnd, &rect);
-				reshape(rect.right - rect.left, rect.bottom - rect.top);
+				fullscreenWidth = rect.right - rect.left;
+				fullscreenHeight = rect.bottom - rect.top;
 			} else {
-				RECT rect;
 				SetWindowLong(hwnd, GWL_STYLE, WS_VISIBLE | WS_BORDER | WS_THICKFRAME | WS_OVERLAPPEDWINDOW | WS_MINIMIZEBOX);
 				SetWindowPos(hwnd, NULL, 0, 0, 1024, 768, SWP_NOZORDER);
-				GetWindowRect(hwnd, &rect);
-				reshape(rect.right - rect.left, rect.bottom - rect.top);
 			}
+			//initGl();
+			//initShaders();
+			GetWindowRect(hwnd, &rect);
+			reshape(rect.right - rect.left, rect.bottom - rect.top);
 			return 0;
 		}
 		if (showEditor) {
@@ -699,6 +732,7 @@ void WinMainCRTStartup()
 	wglMakeCurrent(hDC, wglCreateContext(hDC));
 	camera = new Camera();
 	initGl();
+	initTextEditor();
 	initStartingCode();
 	initShaders();
 	initFftData();
@@ -730,6 +764,7 @@ void WinMainCRTStartup()
 	freeFftData();
 	finalShaders();
 	finalGl();
+	finalTextEditor();
 	delete camera;
 	ExitProcess(0);
 }

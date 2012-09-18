@@ -74,7 +74,7 @@
     <ClInclude Include="TextEditor.h" />
     <ClInclude Include="TextEditorModel.h" />
     <ClInclude Include="TextEditorUI.h" />
-    <ClInclude Include="vec3.h" />
+    <ClInclude Include="Vec3.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Camera.cpp" />
@@ -83,6 +83,7 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="net_radio.cpp" />
     <ClCompile Include="OpenGLTextEditorUI.cpp" />
+    <ClCompile Include="test.cpp" />
     <ClCompile Include="TextEditor.cpp" />
   </ItemGroup>
   <ItemGroup>
